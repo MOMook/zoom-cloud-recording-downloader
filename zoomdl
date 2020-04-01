@@ -5,6 +5,7 @@ import os
 import argparse
 import requests
 import datetime
+import dateutil.parser
 
 # Zoom only allows specifying a range of 1 month max in recordings queries
 def make_months(start_date, end_date):
@@ -97,13 +98,20 @@ def get_meetings(headers, months):
 
     return meetings
 
-def get_recordings(recordings):
+def get_recordings(recordings, store_path):
     # Each meeting can have multiple recordings (chat, audio, video) and
     # if meetings are long enough you can have multiple video segments
     for recording in recordings:
-        recording_id = str(recording['id'])
-        file_name = recording_id + "." + recording['file_type']
-        file_path = os.path.join('recordings', file_name)
+        recording_type = "Type["+str(recording['recording_type'])+"]"
+        recording_start = dateutil.parser.parse(recording['recording_start']).strftime('Started[%Y-%m-%d_%H:%M:%S]')
+        recording_end = dateutil.parser.parse(recording['recording_end']).strftime('Ended[%Y-%m-%d_%H:%M:%S]')
+
+        file_name = recording_start + "_" + recording_end + "_" + recording_type + "." + recording['file_type'].lower()
+        file_path = os.path.join(store_path, file_name)
+
+        if str(recording['status']) != "completed":
+            print(f'skipping {file_path}, not completed yet')
+            continue
 
         # Allows us to resume work in case we get interrupted
         if os.path.exists(file_path):
@@ -133,12 +141,18 @@ def delete_recordings(recordings, headers):
 
 
 def process_meetings(headers, meetings, delete):
-    if not os.path.exists('recordings'):
-        os.mkdir('recordings')
-
     for meeting in meetings:
+        host_email = str(meeting['host_email'])
+        meeting_date = dateutil.parser.parse(meeting['start_time']).strftime('%Y-%m-%d')
+        meeting_time = dateutil.parser.parse(meeting['start_time']).strftime('%H:%M:%S')
+
+        meeting_path = os.path.join('recordings', meeting_date, host_email, meeting_time)
+
+        if not os.path.exists(meeting_path):
+            os.makedirs(meeting_path, exist_ok=True)
+
         recordings = meeting['recording_files']
-        get_recordings(recordings)
+        get_recordings(recordings, meeting_path)
 
         if delete:
             delete_recordings(recordings, headers)
