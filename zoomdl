@@ -102,16 +102,17 @@ def get_recordings(recordings, store_path):
     # Each meeting can have multiple recordings (chat, audio, video) and
     # if meetings are long enough you can have multiple video segments
     for recording in recordings:
+        recording_id = recording['id']
+        if str(recording['status']) != "completed":
+            print(f'skipping {recording_id}, not completed yet')
+            continue
+
         recording_type = "Type["+str(recording['recording_type'])+"]"
         recording_start = dateutil.parser.parse(recording['recording_start']).strftime('Started[%Y-%m-%d_%H:%M:%S]')
         recording_end = dateutil.parser.parse(recording['recording_end']).strftime('Ended[%Y-%m-%d_%H:%M:%S]')
 
         file_name = recording_start + "_" + recording_end + "_" + recording_type + "." + recording['file_type'].lower()
         file_path = os.path.join(store_path, file_name)
-
-        if str(recording['status']) != "completed":
-            print(f'skipping {file_path}, not completed yet')
-            continue
 
         # Allows us to resume work in case we get interrupted
         if os.path.exists(file_path):
