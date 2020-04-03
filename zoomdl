@@ -103,10 +103,12 @@ def get_recordings(recordings, store_path):
     # if meetings are long enough you can have multiple video segments
     for recording in recordings:
         recording_id = recording['id']
-        if str(recording['status']) != "completed":
-            print(f'skipping {recording_id}, not completed yet')
+        recording_status = recording['status']
+        if recording_status != "completed":
+            print(f'[{recording_id}][{recording_status}] skipping, not completed yet')
             continue
 
+        recording_size = recording['file_size']
         recording_type = "Type["+str(recording['recording_type'])+"]"
         recording_start = dateutil.parser.parse(recording['recording_start']).strftime('Started[%Y-%m-%d_%H:%M:%S]')
         recording_end = dateutil.parser.parse(recording['recording_end']).strftime('Ended[%Y-%m-%d_%H:%M:%S]')
@@ -116,12 +118,19 @@ def get_recordings(recordings, store_path):
 
         # Allows us to resume work in case we get interrupted
         if os.path.exists(file_path):
-            print(f'already have {file_path}')
-            continue
+            local_file_size = os.path.getsize(file_path)
+            if recording_size != local_file_size:
+                print(f'[{recording_id}][{recording_status}] size missmatch local {local_file_size} remote {recording_size}')
+                print(f'[{recording_id}][{recording_status}] removing {file_path}')
+                os.remove(file_path)
+            else:
+                print(f'[{recording_id}][{recording_status}] already have {file_path}')
+                continue
 
-        print(f'downloading {file_path}')
+        download_url = recording['download_url']
+        print(f'[{recording_id}][{recording_status}] downloading {download_url} to {file_path}')
 
-        result = requests.get(recording['download_url'], stream=True)
+        result = requests.get(download_url, stream=True)
 
         with open(file_path, 'wb') as raw:
             for chunk in result.iter_content(1024):
