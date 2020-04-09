@@ -121,8 +121,8 @@ def get_recordings(recordings, store_path):
             local_file_size = os.path.getsize(file_path)
             if recording_size != local_file_size:
                 print(f'[{recording_id}][{recording_status}] size missmatch local {local_file_size} remote {recording_size}')
-                print(f'[{recording_id}][{recording_status}] removing {file_path}')
-                os.remove(file_path)
+                print(f'[{recording_id}][{recording_status}] renaming {file_path}')
+                os.rename(file_path, os.path.join(store_path, "Missmatch[" + str(datetime.datetime.now().timestamp()) + "]" + file_name))
             else:
                 print(f'[{recording_id}][{recording_status}] already have {file_path}')
                 continue
