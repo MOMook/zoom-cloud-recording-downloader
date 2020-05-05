@@ -98,7 +98,7 @@ def get_meetings(headers, months):
 
     return meetings
 
-def get_recordings(recordings, store_path):
+def get_recordings(recordings, store_path, token):
     # Each meeting can have multiple recordings (chat, audio, video) and
     # if meetings are long enough you can have multiple video segments
     for recording in recordings:
@@ -130,7 +130,7 @@ def get_recordings(recordings, store_path):
         download_url = recording['download_url']
         print(f'[{recording_id}][{recording_status}] downloading {download_url} to {file_path}')
 
-        result = requests.get(download_url, stream=True)
+        result = requests.get(f'{download_url}?access_token={token}', stream=True)
 
         with open(file_path, 'wb') as raw:
             for chunk in result.iter_content(1024):
@@ -154,7 +154,7 @@ def delete_recordings(recordings, headers):
         )
 
 
-def process_meetings(headers, meetings, delete):
+def process_meetings(headers, meetings, delete, token):
     for meeting in meetings:
         host_email = str(meeting['host_email'])
         meeting_date = dateutil.parser.parse(meeting['start_time']).strftime('%Y-%m-%d')
@@ -166,7 +166,7 @@ def process_meetings(headers, meetings, delete):
             os.makedirs(meeting_path, exist_ok=True)
 
         recordings = meeting['recording_files']
-        get_recordings(recordings, meeting_path)
+        get_recordings(recordings, meeting_path, token)
 
         if delete:
             delete_recordings(recordings, headers)
@@ -188,7 +188,7 @@ def main(args):
     months = make_months(args.start, args.end)
 
     meetings = get_meetings(headers, months)
-    process_meetings(headers, meetings, args.delete)
+    process_meetings(headers, meetings, args.delete, token)
 
     print('done!')
 
